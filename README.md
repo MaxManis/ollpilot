@@ -5,6 +5,7 @@ This plugin integrates with the Ollama AI models for text generation and context
 ## Features
 
 - **Generation**: Send a prompt to an Ollama server and retrieve the response.
+- **Streaming**: Response tokens streaming.
 - **Suggestion**: Generate suggestions in the current buffer based on the context around the cursor.
 
 ### Later...
@@ -45,6 +46,12 @@ require 'ollama'.setup {
 ### Keybindings
 
 - **q**: Close the Ollama interaction window.
+
+**In Ollpilot window:**
+
+- **<leader>os**: change models size to S(smalle - default)
+- **<leader>om**: change models size to M(medium)
+- **<leader>ol**: change models size to L(large)
 
 ## Contribution
 

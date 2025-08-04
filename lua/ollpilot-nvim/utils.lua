@@ -41,11 +41,14 @@ function M.get_enhanced_context()
   local filename = M.get_current_file_name()
   local filetype = vim.api.nvim_buf_get_option(M.source_buf, "filetype")
   local content = table.concat(vim.api.nvim_buf_get_lines(M.source_buf, 0, -1, false), "\n")
+  local files = vim.fn.globpath(vim.fn.getcwd(), "**/*." .. filetype, false, true)
+  local project_overview = table.concat(files, "\n")
 
   return string.format(
-    "File: %s\n" .. "Filetype: %s\n" .. "Content:\n```%s\n%s\n```",
+    "File: %s\n" .. "Filetype: %s\n" .. "Project files:\n%s\n" .. "Content:\n```%s\n%s\n```",
     filename,
     filetype,
+    project_overview,
     filetype,
     content
   )
@@ -54,12 +57,16 @@ end
 -- Create the Ollama API request body
 function M.create_request_body(prompt)
   local context = M.get_enhanced_context()
-  local full_prompt = string.format("%s\n\nBased on the above file, %s", context, prompt)
+  local full_prompt = string.format(
+    "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.\n\n%s\n\nBased on the above file, %s",
+    context,
+    prompt
+  )
 
   return vim.json.encode({
     model = M.config.model,
     prompt = full_prompt,
-    stream = false,
+    stream = true,
   })
 end
 
@@ -73,6 +80,15 @@ function M.handle_response(data, callback)
   else
     vim.notify("Failed to process response: " .. response, vim.log.levels.ERROR)
   end
+end
+
+function M.update_window_title(win, model)
+  vim.api.nvim_win_set_config(win, {
+    title = {
+      { " ✨ Ollpilot ", "Title" },
+      { "Model: " .. model, "Comment" },
+    },
+  })
 end
 
 -- Create window configuration for floating window
