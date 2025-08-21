@@ -1,4 +1,20 @@
-# Ollpilot Nvim Plugin for Neovim
+        ▂▃▂     ▃▃
+       ▅▃▁▅▂   ▅▂▃▅▁
+       ▆  ▅▂   ▅▂ ▆▁
+       ▆  ▅▂   ▅▂ ▆
+       ▆  ▅▅▃▄▅▄▁▁▇▁
+      ▁▅▃▁▁▁  ▁▂▂▆▂
+      ▃▄▁        ▂▆▂
+     ▁▅▂   ▄▆▂    ▁▃▄▂
+     ▁▄▁          ▁▄▆▆▁
+     ▁▄▁        ▁▃▃▃▅▆▁
+     ▁▄▁    ▁▃▄▄▄▅▄▅▄▁
+      ▄▁         ▅
+    ▂▄▄▂▂▂▂▂▂▂▂▂▂▅▂▂▂▂▂
+
+▄████▆▅▅▅▅▅▅▅▅▅▅▅▅▅▆▅
+
+# Ollpilot
 
 This plugin integrates with the Ollama AI models for text generation and contextual help in Neovim. It allows you to interact with Ollama by sending prompts, generating suggestions, searching for project symbols and LSP references, and viewing file history.
 
