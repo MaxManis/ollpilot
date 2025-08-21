@@ -31,6 +31,29 @@ function M.setup(user_config)
 	utils.setup_config(user_config)
 end
 
+-- Update the window data with the selected files
+function M.update_selected_files_display()
+	if not M.output_buf or not vim.api.nvim_buf_is_valid(M.output_buf) then
+		return
+	end
+	local sysinfo = vim.api.nvim_buf_get_lines(M.output_buf, 0, 4, false)
+	local selected = utils.selected_files
+	local seen = {}
+	local display = { "Selected files(<leader>of) for context:" }
+	for _, f in ipairs(selected) do
+		if not seen[f] then
+			table.insert(display, "- " .. vim.fn.fnamemodify(f, ":t") .. " (" .. f .. ")")
+			seen[f] = true
+		end
+	end
+	if #display == 1 then
+		table.insert(display, "(none)")
+	end
+
+	local new_lines = vim.list_extend(sysinfo, display)
+	vim.api.nvim_buf_set_lines(M.output_buf, 0, -1, false, new_lines)
+end
+
 -- Send prompt to Ollama
 local function query_ollama(prompt, callback, useContext)
 	local request_body = vim.json.encode({
@@ -42,6 +65,7 @@ local function query_ollama(prompt, callback, useContext)
 	if useContext then
 		request_body = utils.create_request_body(prompt)
 	end
+	utils.selected_files = {}
 
 	if vim.system then
 		local cmd = {
@@ -104,6 +128,7 @@ local function query_ollama_stream(prompt, on_token, on_done, useContext)
 		request_body = utils.create_request_body(prompt)
 		-- Ensure stream=true in your create_request_body!
 	end
+	utils.selected_files = {}
 
 	local cmd = {
 		"curl",
@@ -160,16 +185,23 @@ function M.open_ollpilot_window()
 
 	-- First configure the buffer (modifiable)
 	M.output_buf = buf
+	vim.keymap.set("n", "<leader>of", function()
+		utils.pick_files_with_telescope()
+		-- vim.defer_fn(M.update_selected_files_display, 200) -- update after selection
+	end, { buffer = M.input_buf, desc = "Pick files for context" })
+
 	vim.api.nvim_buf_set_option(M.output_buf, "filetype", "markdown")
 	vim.api.nvim_buf_set_lines(M.output_buf, 0, -1, false, {
-		"Response will appear here...",
+		"Response will appear here....",
 		"",
 		"Change Model size: press <leader>os, <leader>om, <leader>ol to switch between S/M/L sizes",
+		"",
+		"Select files to context <leader>of",
 	})
 
 	-- Then set as readonly
-	vim.api.nvim_buf_set_option(M.output_buf, "modifiable", false)
-	vim.api.nvim_buf_set_option(M.output_buf, "readonly", true)
+	-- vim.api.nvim_buf_set_option(M.output_buf, "modifiable", false)
+	-- vim.api.nvim_buf_set_option(M.output_buf, "readonly", true)
 
 	-- Rest of window setup...
 	local win_width = vim.api.nvim_win_get_width(main_win)
@@ -210,6 +242,8 @@ function M.open_ollpilot_window()
 	vim.keymap.set("n", "q", M.close_window, { buffer = M.input_buf })
 
 	vim.keymap.set("n", "q", M.close_window, { buffer = M.output_buf })
+
+	vim.keymap.set("n", "r", M.reload_ollpilot_window, { buffer = M.output_buf })
 end
 
 function M.close_window()
@@ -235,6 +269,11 @@ function M.close_window()
 	M.input_win = nil
 	M.output_buf = nil
 	M.input_buf = nil
+end
+
+function M.reload_ollpilot_window()
+	M.close_window()
+	M.open_ollpilot_window()
 end
 
 -- Send prompt from the Ollama buffer

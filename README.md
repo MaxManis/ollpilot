@@ -7,6 +7,7 @@ This plugin integrates with the Ollama AI models for text generation and context
 - **Generation**: Send a prompt to an Ollama server and retrieve the response.
 - **Streaming**: Response tokens streaming.
 - **Suggestion**: Generate suggestions in the current buffer based on the context around the cursor.
+- **File picking**: Select files that you want to add to the context with Telescope
 
 ### Later...
 

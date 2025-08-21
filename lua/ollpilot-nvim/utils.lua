@@ -19,6 +19,7 @@ M.config = {
 
 -- Track the source buffer separately
 M.source_buf = nil
+M.selected_files = {}
 
 -- Initialize the plugin configuration
 function M.setup_config(user_config)
@@ -82,21 +83,86 @@ local function get_context_files(filetype)
 	return unique
 end
 
+function M.pick_files_with_telescope()
+    local ok, telescope = pcall(require, "telescope.builtin")
+    if not ok then
+        vim.notify("Telescope is not installed!", vim.log.levels.ERROR)
+        return
+    end
+    telescope.find_files({
+        attach_mappings = function(_, map)
+            map("i", "<CR>", function(prompt_bufnr)
+                local actions = require("telescope.actions")
+                local state = require("telescope.actions.state")
+                local selection = state.get_selected_entry()
+                if selection then
+                    local fname = selection.path or selection.filename
+                    local exists = false
+                    for _, f in ipairs(M.selected_files) do
+                        if f == fname then
+                            exists = true
+                            break
+                        end
+                    end
+                    if not exists then
+                        table.insert(M.selected_files, fname)
+                        vim.notify("Added to context: " .. fname)
+                    else
+                        vim.notify("File already added: " .. fname, vim.log.levels.WARN)
+                    end
+                    local ollpilot = require("ollpilot-nvim.ollpilot1")
+                    if ollpilot.update_selected_files_display then
+                        ollpilot.update_selected_files_display()
+                    end
+                end
+                actions.close(prompt_bufnr)
+            end)
+            return true
+        end,
+    })
+end
+
 -- Get enhanced context including file information
 function M.get_enhanced_context()
 	local filename = M.get_current_file_name()
 	local filetype = vim.api.nvim_buf_get_option(M.source_buf, "filetype")
 	local content = table.concat(vim.api.nvim_buf_get_lines(M.source_buf, 0, -1, false), "\n")
 	local files = get_context_files(filetype)
+
+	-- Add selected files to context
+	for _, f in ipairs(M.selected_files) do
+		if not vim.tbl_contains(files, f) then
+			table.insert(files, f)
+		end
+	end
+
 	local project_overview = table.concat(files, "\n")
+	local selected_contents = {}
+	for _, f in ipairs(M.selected_files) do
+		local ok, lines = pcall(function()
+			return vim.fn.readfile(f)
+		end)
+		if ok and lines then
+			table.insert(
+				selected_contents,
+				string.format(
+					"File: %s\n```%s\n%s\n```",
+					vim.fn.fnamemodify(f, ":t"),
+					vim.fn.fnamemodify(f, ":e"),
+					table.concat(lines, "\n")
+				)
+			)
+		end
+	end
 
 	return string.format(
-		"File: %s\n" .. "Filetype: %s\n" .. "Project files:\n%s\n" .. "Content:\n```%s\n%s\n```",
+		"File: %s\n" .. "Filetype: %s\n" .. "Project files:\n%s\n" .. "Content:\n```%s\n%s\n```\n%s",
 		filename,
 		filetype,
 		project_overview,
 		filetype,
-		content
+		content,
+		table.concat(selected_contents, "\n")
 	)
 end
 
@@ -104,10 +170,23 @@ end
 function M.create_request_body(prompt)
 	local context = M.get_enhanced_context()
 	local full_prompt = string.format(
-		"You are Qwen, created by Alibaba Cloud. You are a helpful assistant.\n\n%s\n\nBased on the above file, %s",
+		"You are Qwen, created by Alibaba Cloud. You are a helpful assistant.\n\n%s\n\nBased on the above context, %s",
 		context,
 		prompt
 	)
+
+  -- NOTE: save the prompt to a debug file to see what is sent to Ollama
+	-- local debug_path = "/tmp/ollpilot_prompt.txt"
+	-- local ok, err = pcall(function()
+	-- 	local f = io.open(debug_path, "w")
+	-- 	if f then
+	-- 		f:write(full_prompt)
+	-- 		f:close()
+	-- 	end
+	-- end)
+	-- if not ok then
+	-- 	vim.notify("Failed to save prompt: " .. tostring(err), vim.log.levels.WARN)
+	-- end
 
 	return vim.json.encode({
 		model = M.config.model,
