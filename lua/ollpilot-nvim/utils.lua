@@ -110,7 +110,7 @@ function M.pick_files_with_telescope()
                     else
                         vim.notify("File already added: " .. fname, vim.log.levels.WARN)
                     end
-                    local ollpilot = require("ollpilot-nvim.ollpilot1")
+                    local ollpilot = require("ollpilot-nvim.ollpilot")
                     if ollpilot.update_selected_files_display then
                         ollpilot.update_selected_files_display()
                     end
